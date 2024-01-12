@@ -1,0 +1,60 @@
+version: "3"
+
+services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./hosts:/etc/nginx/conf.d
+      - ./www:/var/www
+      - ./logs:/var/log/nginx
+    depends_on:
+      - php
+    networks:
+      - app-network
+
+  php:
+    image: php:8.2-fpm
+    volumes:
+      - ./www:/var/www
+    networks:
+      - app-network
+    depends_on:
+      - mariadb
+    links:
+      - mariadb
+    working_dir: /var/www
+    command: bash -c "docker-php-ext-install pdo pdo_mysql && php-fpm"
+
+  mariadb:
+    image: mariadb:latest
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root_passw
+      MYSQL_DATABASE: telecom
+      MYSQL_USER: root
+      MYSQL_PASSWORD: secret
+    volumes:
+      - ./mariadb:/var/lib/mysql
+    networks:
+      - app-network
+    restart: always
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+    networks:
+      - app-network
+    depends_on:
+      - mariadb
+
+networks:
+  app-network:
+    driver: bridge
